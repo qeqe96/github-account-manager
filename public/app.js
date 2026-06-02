@@ -3,13 +3,15 @@
 
 const HOURS_72 = 72 * 60 * 60 * 1000;
 const FIXED_PASSWORD = '0123456Asd%';
+const ITEMS_PER_PAGE = 20;
 
-// Supabase config - KULLANICI BUNLARI DOLDURACAK
 const SUPABASE_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6eGlkbGRibWp1aHl3b2d1b3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mjc5OTUsImV4cCI6MjA5NjAwMzk5NX0.NwflyEPFj5oVwQBjIAwP2EXvLJBVUSh4Jmeitfz2cag';
 
 let supabase = null;
 let accounts = [];
+let currentTab = 'all';
+let currentPage = 1;
 
 const modalOverlay = document.getElementById('modal-overlay');
 const toastContainer = document.getElementById('toast-container');
@@ -93,17 +95,17 @@ async function loadAccounts() {
 }
 
 function setupEventListeners() {
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const panel = item.dataset.panel;
-            showPanel(panel);
-            setActiveNav(item);
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentTab = btn.dataset.tab;
+            currentPage = 1;
+            setActiveTab(btn);
+            renderTable();
         });
     });
 
     document.getElementById('add-account-form').addEventListener('submit', handleAddAccount);
-    searchInput.addEventListener('input', handleSearch);
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
 
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) closeModal();
@@ -111,30 +113,12 @@ function setupEventListeners() {
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
-        if (e.ctrlKey && e.key === 'k') {
-            e.preventDefault();
-            searchInput.focus();
-        }
     });
 }
 
-function showPanel(panelName) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active-panel'));
-    document.getElementById(`panel-${panelName}`).classList.add('active-panel');
-
-    const titles = {
-        dashboard: 'Dashboard',
-        active: 'Aktif Hesaplar',
-        verify: 'Doğrulanacak Hesaplar',
-        verified: 'Onaylanan Hesaplar',
-        sold: 'Satılan Hesaplar'
-    };
-    document.getElementById('page-title').textContent = titles[panelName] || 'Dashboard';
-}
-
-function setActiveNav(item) {
-    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-    item.classList.add('active');
+function setActiveTab(btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
 }
 
 function openModal() {
@@ -328,355 +312,143 @@ function getInitials(email) {
     return email.substring(0, 2).toUpperCase();
 }
 
-function renderAll() {
-    updateStats();
-    updateNavStats();
-    renderActiveTable();
-    renderVerifyTable();
-    renderVerifiedTable();
-    renderSoldTable();
-    renderDashboardLists();
-}
-
-function updateStats() {
-    document.getElementById('stat-active').textContent = accounts.filter(a => a.status === 'active').length;
-    document.getElementById('stat-verify').textContent = accounts.filter(a => a.status === 'verify').length;
-    document.getElementById('stat-verified').textContent = accounts.filter(a => a.status === 'verified').length;
-    document.getElementById('stat-sold').textContent = accounts.filter(a => a.status === 'sold').length;
-}
-
-function updateNavStats() {
-    document.getElementById('nav-total').textContent = accounts.length;
-    document.getElementById('nav-active').textContent = accounts.filter(a => a.status === 'active').length;
-    document.getElementById('nav-verify').textContent = accounts.filter(a => a.status === 'verify').length;
-    document.getElementById('nav-verified').textContent = accounts.filter(a => a.status === 'verified').length;
-    document.getElementById('nav-sold').textContent = accounts.filter(a => a.status === 'sold').length;
-}
-
-function renderActiveTable() {
-    const tbody = document.getElementById('table-active');
-    const activeAccounts = getFilteredAccounts('active');
-    document.getElementById('count-active').textContent = activeAccounts.length;
-
-    if (activeAccounts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>Aktif hesap yok</p></div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = activeAccounts.map(acc => {
-        const timer = formatTimeRemaining(acc.created_at, acc.status);
-        return `
-            <tr>
-                <td>
-                    <div class="account-cell">
-                        <div class="account-avatar">${getInitials(acc.email)}</div>
-                        <div class="account-details">
-                            <span class="account-email">${escapeHtml(acc.email)}</span>
-                            ${acc.note ? `<span class="account-note">${escapeHtml(acc.note)}</span>` : ''}
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.password)}', 'Şifre')">
-                        <i class="fas fa-key"></i>
-                        <span>${maskText(acc.password)}</span>
-                    </div>
-                </td>
-                <td>
-                    ${acc.two_fa ? `
-                    <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.two_fa)}', '2FA Key')">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>${maskText(acc.two_fa)}</span>
-                    </div>` : '-'}
-                </td>
-                <td>${formatDate(acc.created_at)}</td>
-                <td>
-                    <span class="timer ${timer.className}" data-timer="${acc.id}">
-                        <i class="fas fa-hourglass-half"></i>
-                        ${timer.text}
-                    </span>
-                </td>
-                <td>
-                    <div class="actions-cell">
-                        <button class="btn-action copy" onclick="copyAccountInfo('${acc.id}')" title="Tümünü Kopyala">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button class="btn-action verify" onclick="verifyAccount('${acc.id}')" title="Doğrulanacaklara Taşı">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                        <button class="btn-action delete" onclick="deleteAccount('${acc.id}')" title="Sil">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function renderVerifyTable() {
-    const tbody = document.getElementById('table-verify');
-    const verifyAccounts = getFilteredAccounts('verify');
-    document.getElementById('count-verify').textContent = verifyAccounts.length;
-
-    if (verifyAccounts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>Doğrulanacak hesap yok</p></div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = verifyAccounts.map(acc => `
-        <tr>
-            <td>
-                <div class="account-cell">
-                    <div class="account-avatar">${getInitials(acc.email)}</div>
-                    <div class="account-details">
-                        <span class="account-email">${escapeHtml(acc.email)}</span>
-                        ${acc.note ? `<span class="account-note">${escapeHtml(acc.note)}</span>` : ''}
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.password)}', 'Şifre')">
-                    <i class="fas fa-key"></i>
-                    <span>${maskText(acc.password)}</span>
-                </div>
-            </td>
-            <td>
-                ${acc.two_fa ? `
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.two_fa)}', '2FA Key')">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>${maskText(acc.two_fa)}</span>
-                </div>` : '-'}
-            </td>
-            <td>${formatDate(acc.created_at)}</td>
-            <td>
-                <span class="status-badge verify">
-                    <i class="fas fa-clock"></i>
-                    Bekliyor
-                </span>
-            </td>
-            <td>
-                <div class="actions-cell">
-                    <button class="btn-action copy" onclick="copyAccountInfo('${acc.id}')" title="Tümünü Kopyala">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    <button class="btn-action verify" onclick="verifyAccount('${acc.id}')" title="Onayla">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn-action delete" onclick="deleteAccount('${acc.id}')" title="Sil">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function renderVerifiedTable() {
-    const tbody = document.getElementById('table-verified');
-    const verifiedAccounts = getFilteredAccounts('verified');
-    document.getElementById('count-verified').textContent = verifiedAccounts.length;
-
-    if (verifiedAccounts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>Onaylanan hesap yok</p></div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = verifiedAccounts.map(acc => `
-        <tr>
-            <td>
-                <div class="account-cell">
-                    <div class="account-avatar">${getInitials(acc.email)}</div>
-                    <div class="account-details">
-                        <span class="account-email">${escapeHtml(acc.email)}</span>
-                        ${acc.note ? `<span class="account-note">${escapeHtml(acc.note)}</span>` : ''}
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.password)}', 'Şifre')">
-                    <i class="fas fa-key"></i>
-                    <span>${maskText(acc.password)}</span>
-                </div>
-            </td>
-            <td>
-                ${acc.two_fa ? `
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.two_fa)}', '2FA Key')">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>${maskText(acc.two_fa)}</span>
-                </div>` : '-'}
-            </td>
-            <td>${formatDate(acc.verified_at)}</td>
-            <td>
-                <span class="status-badge verified">
-                    <i class="fas fa-check-circle"></i>
-                    Onaylandı
-                </span>
-            </td>
-            <td>
-                <div class="actions-cell">
-                    <button class="btn-action copy" onclick="copyAccountInfo('${acc.id}')" title="Tümünü Kopyala">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    <button class="btn-action sell" onclick="sellAccount('${acc.id}')" title="Satıldı Olarak İşaretle">
-                        <i class="fas fa-shopping-cart"></i>
-                    </button>
-                    <button class="btn-action delete" onclick="deleteAccount('${acc.id}')" title="Sil">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function renderSoldTable() {
-    const tbody = document.getElementById('table-sold');
-    const soldAccounts = getFilteredAccounts('sold');
-    document.getElementById('count-sold').textContent = soldAccounts.length;
-
-    if (soldAccounts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>Satılan hesap yok</p></div></td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = soldAccounts.map(acc => `
-        <tr>
-            <td>
-                <div class="account-cell">
-                    <div class="account-avatar">${getInitials(acc.email)}</div>
-                    <div class="account-details">
-                        <span class="account-email">${escapeHtml(acc.email)}</span>
-                        ${acc.note ? `<span class="account-note">${escapeHtml(acc.note)}</span>` : ''}
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.password)}', 'Şifre')">
-                    <i class="fas fa-key"></i>
-                    <span>${maskText(acc.password)}</span>
-                </div>
-            </td>
-            <td>
-                ${acc.two_fa ? `
-                <div class="copy-field" onclick="copyToClipboard('${escapeHtml(acc.two_fa)}', '2FA Key')">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>${maskText(acc.two_fa)}</span>
-                </div>` : '-'}
-            </td>
-            <td>${formatDate(acc.sold_at)}</td>
-            <td>
-                <span class="status-badge sold">
-                    <i class="fas fa-shopping-cart"></i>
-                    Satıldı
-                </span>
-            </td>
-            <td>
-                <div class="actions-cell">
-                    <button class="btn-action copy" onclick="copyAccountInfo('${acc.id}')" title="Tümünü Kopyala">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    <button class="btn-action delete" onclick="deleteAccount('${acc.id}')" title="Sil">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function renderDashboardLists() {
-    const activeList = document.getElementById('dashboard-active-list');
-    const activeAccounts = accounts.filter(a => a.status === 'active').slice(0, 5);
-
-    if (activeAccounts.length === 0) {
-        activeList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <p>Henüz hesap eklenmemiş</p>
-            </div>`;
-    } else {
-        activeList.innerHTML = activeAccounts.map(acc => {
-            const timer = formatTimeRemaining(acc.created_at, acc.status);
-            return `
-            <div class="list-item" onclick="showPanel('active'); setActiveNav(document.querySelector('[data-panel=\"active\"]'))">
-                <div class="list-item-info">
-                    <div class="account-avatar">${getInitials(acc.email)}</div>
-                    <div class="list-item-meta">
-                        <span class="list-item-title">${escapeHtml(acc.email)}</span>
-                        <span class="list-item-subtitle">${formatDate(acc.created_at)}</span>
-                    </div>
-                </div>
-                <span class="list-item-timer ${timer.className}">${timer.text}</span>
-            </div>`;
-        }).join('');
-    }
-
-    const verifyList = document.getElementById('dashboard-verify-list');
-    const verifyAccounts = accounts.filter(a => a.status === 'verify').slice(0, 5);
-
-    if (verifyAccounts.length === 0) {
-        verifyList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <p>Doğrulanacak hesap yok</p>
-            </div>`;
-    } else {
-        verifyList.innerHTML = verifyAccounts.map(acc => `
-            <div class="list-item" onclick="showPanel('verify'); setActiveNav(document.querySelector('[data-panel=\"verify\"]'))">
-                <div class="list-item-info">
-                    <div class="account-avatar">${getInitials(acc.email)}</div>
-                    <div class="list-item-meta">
-                        <span class="list-item-title">${escapeHtml(acc.email)}</span>
-                        <span class="list-item-subtitle">Bekliyor</span>
-                    </div>
-                </div>
-                <span class="status-badge verify">
-                    <i class="fas fa-clock"></i>
-                </span>
-            </div>
-        `).join('');
-    }
-}
-
-function handleSearch(e) {
-    const query = e.target.value.toLowerCase();
-    renderAll();
-
-    if (!query) return;
-
-    document.querySelectorAll('.accounts-table tbody tr').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        if (!text.includes(query)) {
-            row.style.display = 'none';
-        }
-    });
-}
-
-function getFilteredAccounts(status) {
+function getFilteredAccounts() {
     const query = searchInput.value.toLowerCase();
-    let filtered = accounts.filter(a => a.status === status);
+    let filtered = accounts;
+
+    if (currentTab !== 'all') {
+        filtered = filtered.filter(a => a.status === currentTab);
+    }
 
     if (query) {
         filtered = filtered.filter(a =>
             a.email.toLowerCase().includes(query) ||
-            (a.note && a.note.toLowerCase().includes(query))
+            (a.note && a.note.toLowerCase().includes(query)) ||
+            (a.two_fa && a.two_fa.toLowerCase().includes(query))
         );
     }
 
     return filtered;
 }
 
+function renderAll() {
+    updateStats();
+    renderTable();
+}
+
+function updateStats() {
+    document.getElementById('stat-total').textContent = accounts.length;
+    document.getElementById('stat-active').textContent = accounts.filter(a => a.status === 'active').length;
+    document.getElementById('stat-verify').textContent = accounts.filter(a => a.status === 'verify').length;
+    document.getElementById('stat-verified').textContent = accounts.filter(a => a.status === 'verified').length;
+    document.getElementById('stat-sold').textContent = accounts.filter(a => a.status === 'sold').length;
+}
+
+function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const filtered = getFilteredAccounts();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+    document.getElementById('showing-count').textContent = filtered.length;
+    document.getElementById('page-info').textContent = `Sayfa ${currentPage} / ${totalPages}`;
+
+    if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-cell"><div class="empty-state"><i class="fas fa-inbox"></i><p>Hesap bulunamadı</p></div></td></tr>`;
+        renderPagination(totalPages);
+        return;
+    }
+
+    tbody.innerHTML = pageItems.map(acc => {
+        const timer = acc.status === 'active' ? formatTimeRemaining(acc.created_at, acc.status) : null;
+        const statusLabels = {
+            active: '<span class="tag tag-blue"><i class="fas fa-clock"></i> Aktif</span>',
+            verify: '<span class="tag tag-orange"><i class="fas fa-check-circle"></i> Doğrulanacak</span>',
+            verified: '<span class="tag tag-green"><i class="fas fa-shield-check"></i> Onaylandı</span>',
+            sold: '<span class="tag tag-purple"><i class="fas fa-shopping-cart"></i> Satıldı</span>'
+        };
+
+        let actionButtons = '';
+        if (acc.status === 'active') {
+            actionButtons = `
+                <button class="btn-row" onclick="verifyAccount('${acc.id}')" title="Doğrulanacak"><i class="fas fa-arrow-right"></i></button>
+                <button class="btn-row" onclick="deleteAccount('${acc.id}')" title="Sil"><i class="fas fa-trash"></i></button>`;
+        } else if (acc.status === 'verify') {
+            actionButtons = `
+                <button class="btn-row" onclick="verifyAccount('${acc.id}')" title="Onayla"><i class="fas fa-check"></i></button>
+                <button class="btn-row" onclick="deleteAccount('${acc.id}')" title="Sil"><i class="fas fa-trash"></i></button>`;
+        } else if (acc.status === 'verified') {
+            actionButtons = `
+                <button class="btn-row" onclick="sellAccount('${acc.id}')" title="Sat"><i class="fas fa-shopping-cart"></i></button>
+                <button class="btn-row" onclick="deleteAccount('${acc.id}')" title="Sil"><i class="fas fa-trash"></i></button>`;
+        } else {
+            actionButtons = `<button class="btn-row" onclick="deleteAccount('${acc.id}')" title="Sil"><i class="fas fa-trash"></i></button>`;
+        }
+
+        return `
+            <tr>
+                <td><div class="account-cell"><div class="account-avatar">${getInitials(acc.email)}</div><span class="account-email">${escapeHtml(acc.email)}</span></div></td>
+                <td><span class="mono" onclick="copyToClipboard('${escapeHtml(acc.password)}', 'Şifre')" title="Kopyala">${escapeHtml(acc.password)}</span></td>
+                <td><span class="mono" onclick="copyToClipboard('${escapeHtml(acc.two_fa || '-')}', '2FA')" title="Kopyala">${escapeHtml(acc.two_fa || '-')}</span></td>
+                <td>${formatDate(acc.created_at)}</td>
+                <td>${timer ? `<span class="timer ${timer.className}">${timer.text}</span>` : '-'}</td>
+                <td>${statusLabels[acc.status] || acc.status}</td>
+                <td>${acc.note ? escapeHtml(acc.note) : '-'}</td>
+                <td>
+                    <div class="actions-cell">
+                        <button class="btn-row" onclick="copyAccountInfo('${acc.id}')" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button>
+                        ${actionButtons}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const container = document.getElementById('pagination');
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = `<button class="btn-page" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            html += `<button class="btn-page ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            html += `<span class="page-dots">...</span>`;
+        }
+    }
+
+    html += `<button class="btn-page" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+    container.innerHTML = html;
+}
+
+function changePage(page) {
+    const filtered = getFilteredAccounts();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderTable();
+}
+
 function startTimer() {
     setInterval(() => {
         checkExpiredAccounts();
-
-        document.querySelectorAll('[data-timer]').forEach(el => {
-            const id = el.dataset.timer;
+        document.querySelectorAll('.timer').forEach(el => {
+            const id = el.closest('tr')?.dataset?.id;
+            if (!id) return;
             const acc = accounts.find(a => a.id === id);
             if (acc && acc.status === 'active') {
                 const timer = formatTimeRemaining(acc.created_at, acc.status);
-                el.innerHTML = `<i class="fas fa-hourglass-half"></i> ${timer.text}`;
+                el.textContent = timer.text;
                 el.className = `timer ${timer.className}`;
             }
         });
@@ -686,24 +458,10 @@ function startTimer() {
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        info: 'fa-info-circle'
-    };
-
-    toast.innerHTML = `
-        <i class="fas ${icons[type]}"></i>
-        <span class="toast-message">${message}</span>
-    `;
-
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span class="toast-message">${message}</span>`;
     toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('hiding');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    setTimeout(() => { toast.classList.add('hiding'); setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
 function escapeHtml(text) {
@@ -711,12 +469,6 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
-
-function maskText(text) {
-    if (!text) return '';
-    if (text.length <= 8) return '•'.repeat(text.length);
-    return text.substring(0, 3) + '•'.repeat(text.length - 6) + text.substring(text.length - 3);
 }
 
 init();
