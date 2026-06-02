@@ -12,20 +12,8 @@ services:
           name: github-accounts-db
           property: connectionString
 
-  - type: web
-    name: github-account-manager-seed
-    runtime: node
-    buildCommand: npm install
-    startCommand: npm run seed
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: github-accounts-db
-          property: connectionString
-
 databases:
   - name: github-accounts-db
     databaseName: github_accounts
     user: github_accounts_user
+    plan: free
