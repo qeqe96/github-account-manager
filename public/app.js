@@ -1,25 +1,80 @@
-// Github Account Manager Application
-// ===================================
+// Github Account Manager - Supabase Edition
+// ==========================================
 
 const HOURS_72 = 72 * 60 * 60 * 1000;
 const FIXED_PASSWORD = '0123456Asd%';
-const API_URL = '';
 
+// Supabase config - KULLANICI BUNLARI DOLDURACAK
+const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_KEY = 'YOUR_ANON_PUBLIC_KEY';
+
+let supabase = null;
 let accounts = [];
 
 const modalOverlay = document.getElementById('modal-overlay');
 const toastContainer = document.getElementById('toast-container');
 const searchInput = document.getElementById('search-input');
 
-async function api(method, endpoint, body) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
-    if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(API_URL + endpoint, opts);
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+function initSupabase() {
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } else {
+        showToast('Supabase yüklenemedi, localStorage moduna geçiliyor', 'info');
+        supabase = null;
+    }
+}
+
+async function dbSelect(table, filters) {
+    if (!supabase) {
+        const data = JSON.parse(localStorage.getItem(table) || '[]');
+        if (filters) {
+            return { data: data.filter(filters), error: null };
+        }
+        return { data, error: null };
+    }
+    let query = supabase.from(table).select('*');
+    if (filters && filters.eq) {
+        Object.entries(filters.eq).forEach(([k, v]) => { query = query.eq(k, v); });
+    }
+    if (filters && filters.order) {
+        query = query.order(filters.order.column, { ascending: filters.order.ascending });
+    }
+    return query;
+}
+
+async function dbInsert(table, obj) {
+    if (!supabase) {
+        const data = JSON.parse(localStorage.getItem(table) || '[]');
+        obj.id = Date.now();
+        data.push(obj);
+        localStorage.setItem(table, JSON.stringify(data));
+        return { data: [obj], error: null };
+    }
+    return supabase.from(table).insert(obj).select();
+}
+
+async function dbUpdate(table, id, obj) {
+    if (!supabase) {
+        const data = JSON.parse(localStorage.getItem(table) || '[]');
+        const idx = data.findIndex(x => x.id == id);
+        if (idx >= 0) { data[idx] = { ...data[idx], ...obj }; localStorage.setItem(table, JSON.stringify(data)); }
+        return { data: [data[idx]], error: null };
+    }
+    return supabase.from(table).update(obj).eq('id', id).select();
+}
+
+async function dbDelete(table, id) {
+    if (!supabase) {
+        let data = JSON.parse(localStorage.getItem(table) || '[]');
+        data = data.filter(x => x.id != id);
+        localStorage.setItem(table, JSON.stringify(data));
+        return { error: null };
+    }
+    return supabase.from(table).delete().eq('id', id);
 }
 
 async function init() {
+    initSupabase();
     await loadAccounts();
     renderAll();
     startTimer();
@@ -28,11 +83,12 @@ async function init() {
 }
 
 async function loadAccounts() {
-    try {
-        accounts = await api('GET', '/api/accounts');
-    } catch (e) {
+    const { data, error } = await dbSelect('accounts', { order: { column: 'created_at', ascending: false } });
+    if (error) {
         showToast('Veriler yüklenemedi', 'error');
         accounts = [];
+    } else {
+        accounts = data || [];
     }
 }
 
@@ -109,15 +165,27 @@ async function handleAddAccount(e) {
         return;
     }
 
-    try {
-        await api('POST', '/api/accounts', { email, password, two_fa, note, status: 'active' });
-        await loadAccounts();
-        renderAll();
-        closeModal();
-        showToast('Hesap başarıyla eklendi', 'success');
-    } catch (err) {
-        showToast('Hata: ' + err.message, 'error');
+    const obj = {
+        email,
+        password,
+        two_fa,
+        note,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        verified_at: null,
+        sold_at: null
+    };
+
+    const { data, error } = await dbInsert('accounts', obj);
+    if (error) {
+        showToast('Hata: ' + error.message, 'error');
+        return;
     }
+
+    await loadAccounts();
+    renderAll();
+    closeModal();
+    showToast('Hesap başarıyla eklendi', 'success');
 }
 
 function checkExpiredAccounts() {
@@ -153,37 +221,40 @@ async function verifyAccount(id) {
         return;
     }
 
-    try {
-        await api('PUT', `/api/accounts/${id}`, { status: newStatus, verified_at: verifiedAt, sold_at: soldAt });
-        await loadAccounts();
-        renderAll();
-    } catch (err) {
-        showToast('Hata: ' + err.message, 'error');
+    const { error } = await dbUpdate('accounts', id, { status: newStatus, verified_at: verifiedAt, sold_at: soldAt });
+    if (error) {
+        showToast('Hata: ' + error.message, 'error');
+        return;
     }
+
+    await loadAccounts();
+    renderAll();
 }
 
 async function sellAccount(id) {
-    try {
-        await api('PUT', `/api/accounts/${id}`, { status: 'sold', sold_at: new Date().toISOString() });
-        await loadAccounts();
-        renderAll();
-        showToast('Hesap satıldı olarak işaretlendi', 'success');
-    } catch (err) {
-        showToast('Hata: ' + err.message, 'error');
+    const { error } = await dbUpdate('accounts', id, { status: 'sold', sold_at: new Date().toISOString() });
+    if (error) {
+        showToast('Hata: ' + error.message, 'error');
+        return;
     }
+
+    await loadAccounts();
+    renderAll();
+    showToast('Hesap satıldı olarak işaretlendi', 'success');
 }
 
 async function deleteAccount(id) {
     if (!confirm('Bu hesabı silmek istediğinize emin misiniz?')) return;
 
-    try {
-        await api('DELETE', `/api/accounts/${id}`);
-        await loadAccounts();
-        renderAll();
-        showToast('Hesap silindi', 'info');
-    } catch (err) {
-        showToast('Hata: ' + err.message, 'error');
+    const { error } = await dbDelete('accounts', id);
+    if (error) {
+        showToast('Hata: ' + error.message, 'error');
+        return;
     }
+
+    await loadAccounts();
+    renderAll();
+    showToast('Hesap silindi', 'info');
 }
 
 async function copyToClipboard(text, label) {
