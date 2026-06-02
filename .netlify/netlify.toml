@@ -7,7 +7,7 @@ headers = []
 [functions."*"]
 
 [build]
-publish = "C:\\Users\\Emre\\Desktop\\work\\github\\public"
+publish = "c:\\Users\\Emre\\Desktop\\work\\github\\public"
 publishOrigin = "config"
 
 [build.environment]

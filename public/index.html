@@ -5,127 +5,755 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Github Account Manager</title>
-    <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg2: #111;
+            --bg3: #1a1a1a;
+            --border: #222;
+            --text: #eee;
+            --text2: #999;
+            --blue: #3b82f6;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --purple: #8b5cf6
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            gap: 12px
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            white-space: nowrap
+        }
+
+        .brand i {
+            font-size: 18px
+        }
+
+        .stats {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px
+        }
+
+        .pill .num {
+            font-weight: 700;
+            font-size: 13px
+        }
+
+        .pill .lbl {
+            color: var(--text2);
+            font-size: 11px
+        }
+
+        .pill.active {
+            border-color: rgba(59, 130, 246, .3)
+        }
+
+        .pill.verify {
+            border-color: rgba(245, 158, 11, .3)
+        }
+
+        .pill.verified {
+            border-color: rgba(16, 185, 129, .3)
+        }
+
+        .pill.sold {
+            border-color: rgba(139, 92, 246, .3)
+        }
+
+        .btn-add {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0
+        }
+
+        .btn-add:hover {
+            opacity: .9
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            gap: 10px;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .tabs {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap
+        }
+
+        .tab {
+            padding: 5px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            white-space: nowrap
+        }
+
+        .tab.on {
+            background: var(--bg3);
+            color: var(--text);
+            border-color: #333
+        }
+
+        .tab:hover:not(.on) {
+            border-color: #333;
+            color: var(--text)
+        }
+
+        .search {
+            position: relative
+        }
+
+        .search i {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text2);
+            font-size: 11px
+        }
+
+        .search input {
+            padding: 5px 8px 5px 24px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-size: 12px;
+            width: 160px;
+            outline: none;
+            font-family: inherit
+        }
+
+        .search input:focus {
+            border-color: var(--blue)
+        }
+
+        .table-wrap {
+            flex: 1;
+            overflow: auto;
+            padding: 0 16px
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: fixed
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10
+        }
+
+        th {
+            text-align: left;
+            padding: 8px 6px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--text2);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            white-space: nowrap;
+            background: var(--bg)
+        }
+
+        td {
+            padding: 6px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, .02)
+        }
+
+        .col-email {
+            width: 22%
+        }
+
+        .col-pass {
+            width: 14%
+        }
+
+        .col-2fa {
+            width: 18%
+        }
+
+        .col-date {
+            width: 13%
+        }
+
+        .col-timer {
+            width: 10%
+        }
+
+        .col-status {
+            width: 11%
+        }
+
+        .col-note {
+            width: 8%
+        }
+
+        .col-action {
+            width: 4%
+        }
+
+        .cell {
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            background: linear-gradient(135deg, #333, #555);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 10px;
+            flex-shrink: 0
+        }
+
+        .email {
+            font-weight: 500;
+            font-size: 12px
+        }
+
+        .mono {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 2px 5px;
+            background: var(--bg3);
+            border-radius: 3px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .mono:hover {
+            border-color: var(--blue)
+        }
+
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            font-size: 11px
+        }
+
+        .timer.warn {
+            color: var(--orange)
+        }
+
+        .timer.dang {
+            color: var(--red)
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600
+        }
+
+        .t-blue {
+            background: rgba(59, 130, 246, .12);
+            color: var(--blue)
+        }
+
+        .t-orange {
+            background: rgba(245, 158, 11, .12);
+            color: var(--orange)
+        }
+
+        .t-green {
+            background: rgba(16, 185, 129, .12);
+            color: var(--green)
+        }
+
+        .t-purple {
+            background: rgba(139, 92, 246, .12);
+            color: var(--purple)
+        }
+
+        .actions {
+            display: flex;
+            gap: 3px;
+            justify-content: flex-end
+        }
+
+        .btn-a {
+            width: 24px;
+            height: 24px;
+            border-radius: 3px;
+            border: none;
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            padding: 0
+        }
+
+        .btn-a:hover {
+            background: var(--blue);
+            color: #fff
+        }
+
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text2)
+        }
+
+        .empty i {
+            font-size: 24px;
+            margin-bottom: 6px;
+            display: block;
+            opacity: .5
+        }
+
+        .footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text2);
+            flex-shrink: 0
+        }
+
+        .pages {
+            display: flex;
+            gap: 3px
+        }
+
+        .pg {
+            min-width: 24px;
+            height: 24px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px
+        }
+
+        .pg.on {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue)
+        }
+
+        .pg:disabled {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000
+        }
+
+        .modal.show {
+            display: flex
+        }
+
+        .m-box {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 380px;
+            padding: 16px
+        }
+
+        .m-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px
+        }
+
+        .m-head h3 {
+            font-size: 14px
+        }
+
+        .m-close {
+            width: 26px;
+            height: 26px;
+            border-radius: 5px;
+            border: none;
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .fg {
+            margin-bottom: 10px
+        }
+
+        .fg label {
+            display: block;
+            font-size: 11px;
+            color: var(--text2);
+            margin-bottom: 3px;
+            font-weight: 500
+        }
+
+        .fg input {
+            width: 100%;
+            padding: 7px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+            font-family: inherit
+        }
+
+        .fg input:focus {
+            border-color: var(--blue)
+        }
+
+        .f-row {
+            display: flex;
+            gap: 5px
+        }
+
+        .f-row input {
+            flex: 1
+        }
+
+        .f-btn {
+            width: 32px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 11px
+        }
+
+        .f-btn:hover {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue)
+        }
+
+        .m-foot {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px
+        }
+
+        .m-foot button {
+            flex: 1;
+            padding: 7px;
+            border-radius: 5px;
+            border: none;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer
+        }
+
+        .m-sec {
+            background: var(--bg3);
+            color: var(--text2)
+        }
+
+        .m-prim {
+            background: var(--blue);
+            color: #fff
+        }
+
+        .toasts {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        .toast {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--blue);
+            border-radius: 5px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            min-width: 220px;
+            animation: sl .2s
+        }
+
+        .toast.ok {
+            border-left-color: var(--green)
+        }
+
+        .toast.err {
+            border-left-color: var(--red)
+        }
+
+        @keyframes sl {
+            from {
+                transform: translateX(100%);
+                opacity: 0
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px
+        }
+    </style>
 </head>
 
 <body>
     <div class="app">
-        <!-- Header -->
         <header class="header">
-            <div class="header-brand">
-                <i class="fab fa-github"></i>
-                <span>Github Account Manager</span>
+            <div class="brand"><i class="fab fa-github"></i><span>Github Account Manager</span></div>
+            <div class="stats">
+                <div class="pill"><span class="num" id="st-total">0</span><span class="lbl">Toplam</span></div>
+                <div class="pill active"><span class="num" id="st-active">0</span><span class="lbl">Aktif</span></div>
+                <div class="pill verify"><span class="num" id="st-verify">0</span><span class="lbl">Doğrulanacak</span>
+                </div>
+                <div class="pill verified"><span class="num" id="st-verified">0</span><span class="lbl">Onaylanan</span>
+                </div>
+                <div class="pill sold"><span class="num" id="st-sold">0</span><span class="lbl">Satılan</span></div>
             </div>
-            <div class="header-stats">
-                <div class="stat-pill">
-                    <span class="stat-num" id="stat-total">0</span>
-                    <span class="stat-label">Toplam</span>
-                </div>
-                <div class="stat-pill active">
-                    <span class="stat-num" id="stat-active">0</span>
-                    <span class="stat-label">Aktif</span>
-                </div>
-                <div class="stat-pill verify">
-                    <span class="stat-num" id="stat-verify">0</span>
-                    <span class="stat-label">Doğrulanacak</span>
-                </div>
-                <div class="stat-pill verified">
-                    <span class="stat-num" id="stat-verified">0</span>
-                    <span class="stat-label">Onaylanan</span>
-                </div>
-                <div class="stat-pill sold">
-                    <span class="stat-num" id="stat-sold">0</span>
-                    <span class="stat-label">Satılan</span>
-                </div>
-            </div>
-            <button class="btn-add" onclick="openModal()">
-                <i class="fas fa-plus"></i>
-                Yeni Hesap
-            </button>
+            <button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i>Yeni Hesap</button>
         </header>
 
-        <!-- Toolbar -->
         <div class="toolbar">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="all">Tümü</button>
-                <button class="tab-btn" data-tab="active">Aktif</button>
-                <button class="tab-btn" data-tab="verify">Doğrulanacak</button>
-                <button class="tab-btn" data-tab="verified">Onaylanan</button>
-                <button class="tab-btn" data-tab="sold">Satılan</button>
+                <button class="tab on" data-tab="all" onclick="setTab('all')">Tümü</button>
+                <button class="tab" data-tab="active" onclick="setTab('active')">Aktif</button>
+                <button class="tab" data-tab="verify" onclick="setTab('verify')">Doğrulanacak</button>
+                <button class="tab" data-tab="verified" onclick="setTab('verified')">Onaylanan</button>
+                <button class="tab" data-tab="sold" onclick="setTab('sold')">Satılan</button>
             </div>
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Ara...">
-            </div>
+            <div class="search"><i class="fas fa-search"></i><input type="text" id="search" placeholder="Ara..."
+                    oninput="render()"></div>
         </div>
 
-        <!-- Table -->
         <div class="table-wrap">
-            <table class="data-table">
+            <table>
                 <thead>
                     <tr>
-                        <th>Hesap</th>
-                        <th>Şifre</th>
-                        <th>2FA Key</th>
-                        <th>Tarih</th>
-                        <th>Kalan</th>
-                        <th>Durum</th>
-                        <th>Not</th>
-                        <th>İşlem</th>
+                        <th class="col-email">Hesap</th>
+                        <th class="col-pass">Şifre</th>
+                        <th class="col-2fa">2FA Key</th>
+                        <th class="col-date">Tarih</th>
+                        <th class="col-timer">Kalan</th>
+                        <th class="col-status">Durum</th>
+                        <th class="col-note">Not</th>
+                        <th class="col-action"></th>
                     </tr>
                 </thead>
-                <tbody id="table-body"></tbody>
+                <tbody id="tbody"></tbody>
             </table>
         </div>
 
-        <!-- Footer -->
-        <div class="footer-bar">
-            <span id="showing-count">0</span> hesap gösteriliyor
-            <div class="pagination" id="pagination"></div>
+        <div class="footer">
+            <span><span id="showing">0</span> hesap</span>
+            <div class="pages" id="pages"></div>
         </div>
     </div>
 
-    <!-- Modal -->
-    <div class="modal-overlay" id="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Yeni Hesap Ekle</h3>
-                <button class="btn-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    <div class="modal" id="modal">
+        <div class="m-box">
+            <div class="m-head">
+                <h3>Yeni Hesap Ekle</h3><button class="m-close" onclick="closeModal()"><i
+                        class="fas fa-times"></i></button>
             </div>
-            <form id="add-account-form">
-                <div class="form-group">
-                    <label>E-posta</label>
-                    <input type="text" id="acc-email" placeholder="ornek@mail.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Şifre</label>
-                    <div class="input-row">
-                        <input type="text" id="acc-password" placeholder="Şifre" required>
-                        <button type="button" class="btn-input" onclick="setFixedPassword()" title="Sabit şifre"><i
-                                class="fas fa-key"></i></button>
+            <form onsubmit="saveAcc(event)">
+                <div class="fg"><label>E-posta</label><input type="text" id="m-email" placeholder="ornek@mail.com"
+                        required></div>
+                <div class="fg"><label>Şifre</label>
+                    <div class="f-row"><input type="text" id="m-pass" placeholder="Şifre" required><button type="button"
+                            class="f-btn" onclick="fixPass()" title="Sabit şifre"><i class="fas fa-key"></i></button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>2FA Key</label>
-                    <input type="text" id="acc-2fa" placeholder="2FA Secret Key">
-                </div>
-                <div class="form-group">
-                    <label>Not</label>
-                    <input type="text" id="acc-note" placeholder="Opsiyonel not">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">İptal</button>
-                    <button type="submit" class="btn-primary">Ekle</button>
-                </div>
+                <div class="fg"><label>2FA Key</label><input type="text" id="m-2fa" placeholder="2FA Secret Key"></div>
+                <div class="fg"><label>Not</label><input type="text" id="m-note" placeholder="Opsiyonel"></div>
+                <div class="m-foot"><button type="button" class="m-sec" onclick="closeModal()">İptal</button><button
+                        type="submit" class="m-prim">Ekle</button></div>
             </form>
         </div>
     </div>
 
-    <div class="toast-container" id="toast-container"></div>
+    <div class="toasts" id="toasts"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-    <script src="app.js"></script>
+    <script>
+        const H72 = 72 * 60 * 60 * 1000, FIX = '0123456Asd%', PER = 25;
+        const SB_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6eGlkbGRibWp1aHl3b2d1b3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mjc5OTUsImV4cCI6MjA5NjAwMzk5NX0.NwflyEPFj5oVwQBjIAwP2EXvLJBVUSh4Jmeitfz2cag';
+        let sb = null, acc = [], tab = 'all', page = 1, totalPages = 1;
+
+        function init() { try { sb = window.supabase.createClient(SB_URL, SB_KEY) } catch (e) { sb = null } load() }
+        async function load() { if (!sb) { acc = JSON.parse(localStorage.getItem('gam_accounts') || '[]'); render(); return } const { data, error } = await sb.from('accounts').select('*').order('created_at', { ascending: false }); if (error) { acc = JSON.parse(localStorage.getItem('gam_accounts') || '[]'); toast('Supabase hatası, localStorage', 'err') } else { acc = data || [] } render() }
+
+        function setTab(t) { tab = t; page = 1; document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); render() }
+        function fixPass() { document.getElementById('m-pass').value = FIX; toast('Sabit şifre: ' + FIX) }
+        function openModal() { document.getElementById('modal').classList.add('show'); document.getElementById('m-email').focus() }
+        function closeModal() { document.getElementById('modal').classList.remove('show'); document.querySelector('form').reset() }
+
+        async function saveAcc(e) { e.preventDefault(); const o = { email: document.getElementById('m-email').value.trim(), password: document.getElementById('m-pass').value.trim(), two_fa: document.getElementById('m-2fa').value.trim(), note: document.getElementById('m-note').value.trim(), status: 'active', created_at: new Date().toISOString(), verified_at: null, sold_at: null }; if (!o.email || !o.password) return toast('E-posta ve şifre gerekli', 'err'); if (!sb) { o.id = Date.now(); acc.unshift(o); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); closeModal(); toast('Eklendi (local)', 'ok'); return } const { error } = await sb.from('accounts').insert(o); if (error) { toast('Hata: ' + error.message, 'err') } else { await load(); closeModal(); toast('Eklendi', 'ok') } }
+
+        async function delAcc(id) { if (!confirm('Sil?')) return; if (!sb) { acc = acc.filter(a => a.id != id); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); toast('Silindi', 'ok'); return } await sb.from('accounts').delete().eq('id', id); await load(); toast('Silindi', 'ok') }
+
+        async function moveAcc(id, to) { const a = acc.find(x => x.id == id); if (!a) return; let upd = { status: to }; if (to === 'verified') upd.verified_at = new Date().toISOString(); if (to === 'sold') upd.sold_at = new Date().toISOString(); if (!sb) { Object.assign(a, upd); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); toast('Güncellendi', 'ok'); return } await sb.from('accounts').update(upd).eq('id', id); await load(); toast('Güncellendi', 'ok') }
+
+        function fmtDate(ts) { if (!ts) return '-'; const d = new Date(ts); return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }
+        function fmtTimer(created, status, verified) { if (status !== 'active' && !(status === 'verified' && verified)) return '-'; const t = (status === 'active' ? new Date(created) : new Date(verified)).getTime() + H72 - Date.now(); if (t <= 0) return '<span class="timer dang">Süre doldu</span>'; const h = Math.floor(t / 36e5), m = Math.floor(t % 36e5 / 6e4), s = Math.floor(t % 6e4 / 1e3); let cls = ''; if (h < 6) cls = 'dang'; else if (h < 24) cls = 'warn'; return `<span class="timer ${cls}">${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}</span>` }
+        function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML }
+        function copy(t, l) { navigator.clipboard.writeText(t).then(() => toast(l + ' kopyalandı', 'ok')).catch(() => { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); document.execCommand('copy'); document.body.removeChild(x); toast(l + ' kopyalandı', 'ok') }) }
+        function copyAll(id) { const a = acc.find(x => x.id == id); if (!a) return; copy(`E-posta: ${a.email}\nŞifre: ${a.password}${a.two_fa ? '\n2FA: ' + a.two_fa : ''}`, 'Hesap bilgileri') }
+
+        function render() {
+            const q = document.getElementById('search').value.toLowerCase(); let f = acc; if (tab !== 'all') f = f.filter(a => a.status === tab); if (q) f = f.filter(a => (a.email + ' ' + (a.note || '') + ' ' + (a.two_fa || '')).toLowerCase().includes(q)); document.getElementById('st-total').textContent = acc.length; document.getElementById('st-active').textContent = acc.filter(a => a.status === 'active').length; document.getElementById('st-verify').textContent = acc.filter(a => a.status === 'verify').length; document.getElementById('st-verified').textContent = acc.filter(a => a.status === 'verified').length; document.getElementById('st-sold').textContent = acc.filter(a => a.status === 'sold').length; totalPages = Math.max(1, Math.ceil(f.length / PER)); if (page > totalPages) page = totalPages; const start = (page - 1) * PER, pageItems = f.slice(start, start + PER); const tb = document.getElementById('tbody'); if (!pageItems.length) { tb.innerHTML = '<tr><td colspan="8" class="empty"><i class="fas fa-inbox"></i>Hesap bulunamadı</td></tr>' } else {
+                tb.innerHTML = pageItems.map(a => {
+                    const stMap = { active: '<span class="tag t-blue"><i class="fas fa-clock"></i> Aktif</span>', verify: '<span class="tag t-orange"><i class="fas fa-check-circle"></i> Doğrulanacak</span>', verified: '<span class="tag t-green"><i class="fas fa-shield-check"></i> Onaylandı</span>', sold: '<span class="tag t-purple"><i class="fas fa-shopping-cart"></i> Satıldı</span>' };
+                    let btns = '';
+                    if (a.status === 'active') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verify')" title="Doğrulanacak"><i class="fas fa-arrow-right"></i></button>`;
+                    else if (a.status === 'verify') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verified')" title="Onayla"><i class="fas fa-check"></i></button>`;
+                    else if (a.status === 'verified') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'sold')" title="Sat"><i class="fas fa-shopping-cart"></i></button>`;
+                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span></div></td><td><span class="mono" onclick="copy('${esc(a.password)}','Şifre')">${esc(a.password)}</span></td><td><span class="mono" onclick="copy('${esc(a.two_fa || '-')}','2FA')">${esc(a.two_fa || '-')}</span></td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
+                }).join('')
+            }
+            document.getElementById('showing').textContent = f.length; renderPages()
+        }
+
+        function renderPages() { const p = document.getElementById('pages'); if (totalPages <= 1) { p.innerHTML = ''; return } let h = ''; h += `<button class="pg" onclick="goPage(${page - 1})" ${page === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`; for (let i = 1; i <= totalPages; i++) { if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) { h += `<button class="pg ${i === page ? 'on' : ''}" onclick="goPage(${i})">${i}</button>` } else if (i === page - 3 || i === page + 3) { h += `<span style="color:var(--text2);padding:0 4px">...</span>` } } h += `<button class="pg" onclick="goPage(${page + 1})" ${page === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`; p.innerHTML = h }
+        function goPage(p) { if (p < 1 || p > totalPages) return; page = p; render() }
+
+        function toast(m, t = 'info') { const c = document.getElementById('toasts'); const d = document.createElement('div'); d.className = 'toast ' + (t === 'ok' ? 'ok' : t === 'err' ? 'err' : ''); const i = { ok: 'fa-check-circle', err: 'fa-exclamation-circle', info: 'fa-info-circle' }; d.innerHTML = `<i class="fas ${i[t] || i.info}"></i><span>${m}</span>`; c.appendChild(d); setTimeout(() => d.remove(), 3000) }
+
+        setInterval(() => { document.querySelectorAll('.timer').forEach(el => { const id = el.closest('tr')?.dataset?.id; if (!id) return; const a = acc.find(x => x.id == id); if (!a) return; const n = fmtTimer(a.created_at, a.status, a.verified_at); if (n !== el.outerHTML) el.outerHTML = n }) }, 1000);
+
+        init();
+    </script>
 </body>
 
 </html>
