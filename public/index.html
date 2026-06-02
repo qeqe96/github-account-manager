@@ -388,6 +388,56 @@
             color: #fff
         }
 
+        .cpy {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: none;
+            background: transparent;
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 9px;
+            margin-left: 4px;
+            padding: 0;
+            vertical-align: middle;
+            opacity: 0;
+            transition: opacity .15s
+        }
+
+        tr:hover .cpy {
+            opacity: 1
+        }
+
+        .cpy:hover {
+            background: var(--bg3);
+            color: var(--text)
+        }
+
+        .totp-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: none;
+            background: var(--orange);
+            color: #000;
+            cursor: pointer;
+            font-size: 9px;
+            margin-left: 3px;
+            padding: 0;
+            vertical-align: middle;
+            font-weight: 700
+        }
+
+        .totp-btn:hover {
+            opacity: .85
+        }
+
         .empty {
             text-align: center;
             padding: 30px;
@@ -705,6 +755,7 @@
     <div class="toasts" id="toasts"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.2.2/dist/otpauth.umd.min.js"></script>
     <script>
         const H72 = 72 * 60 * 60 * 1000, FIX = '0123456Asd%', PER = 25;
         const SB_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
@@ -730,6 +781,7 @@
         function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML }
         function copy(t, l) { navigator.clipboard.writeText(t).then(() => toast(l + ' kopyalandı', 'ok')).catch(() => { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); document.execCommand('copy'); document.body.removeChild(x); toast(l + ' kopyalandı', 'ok') }) }
         function copyAll(id) { const a = acc.find(x => x.id == id); if (!a) return; copy(`E-posta: ${a.email}\nŞifre: ${a.password}${a.two_fa ? '\n2FA: ' + a.two_fa : ''}`, 'Hesap bilgileri') }
+        function genTOTP(key) { try { const k = key.replace(/\s/g, '').toUpperCase(); const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(k), digits: 6, period: 30 }); const code = totp.generate(); copy(code, 'TOTP Kodu'); toast('TOTP Kodu: ' + code, 'ok') } catch (e) { toast('2FA Key geçersiz', 'err') } }
 
         function render() {
             const q = document.getElementById('search').value.toLowerCase(); let f = acc; if (tab !== 'all') f = f.filter(a => a.status === tab); if (q) f = f.filter(a => (a.email + ' ' + (a.note || '') + ' ' + (a.two_fa || '')).toLowerCase().includes(q)); document.getElementById('st-total').textContent = acc.length; document.getElementById('st-active').textContent = acc.filter(a => a.status === 'active').length; document.getElementById('st-verify').textContent = acc.filter(a => a.status === 'verify').length; document.getElementById('st-verified').textContent = acc.filter(a => a.status === 'verified').length; document.getElementById('st-sold').textContent = acc.filter(a => a.status === 'sold').length; totalPages = Math.max(1, Math.ceil(f.length / PER)); if (page > totalPages) page = totalPages; const start = (page - 1) * PER, pageItems = f.slice(start, start + PER); const tb = document.getElementById('tbody'); if (!pageItems.length) { tb.innerHTML = '<tr><td colspan="8" class="empty"><i class="fas fa-inbox"></i>Hesap bulunamadı</td></tr>' } else {
@@ -739,7 +791,7 @@
                     if (a.status === 'active') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verify')" title="Doğrulanacak"><i class="fas fa-arrow-right"></i></button>`;
                     else if (a.status === 'verify') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verified')" title="Onayla"><i class="fas fa-check"></i></button>`;
                     else if (a.status === 'verified') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'sold')" title="Sat"><i class="fas fa-shopping-cart"></i></button>`;
-                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span></div></td><td><span class="mono" onclick="copy('${esc(a.password)}','Şifre')">${esc(a.password)}</span></td><td><span class="mono" onclick="copy('${esc(a.two_fa || '-')}','2FA')">${esc(a.two_fa || '-')}</span></td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
+                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span><button class="cpy" onclick="copy('${esc(a.email)}','E-posta')" title="Kopyala"><i class="fas fa-copy"></i></button></div></td><td><span class="mono">${esc(a.password)}</span><button class="cpy" onclick="copy('${esc(a.password)}','Şifre')" title="Kopyala"><i class="fas fa-copy"></i></button></td><td><span class="mono">${esc(a.two_fa || '-')}</span>${a.two_fa ? `<button class="cpy" onclick="copy('${esc(a.two_fa)}','2FA Key')" title="Kopyala"><i class="fas fa-copy"></i></button><button class="totp-btn" onclick="genTOTP('${esc(a.two_fa)}')" title="TOTP Kodu"><i class="fas fa-bolt"></i></button>` : ''}</td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}${a.note ? `<button class="cpy" onclick="copy('${esc(a.note)}','Not')" title="Kopyala"><i class="fas fa-copy"></i></button>` : ''}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
                 }).join('')
             }
             document.getElementById('showing').textContent = f.length; renderPages()
