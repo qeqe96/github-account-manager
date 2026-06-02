@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Github Account Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <div class="navbar-brand">
+            <i class="fab fa-github"></i>
+            <span>Github Account Manager</span>
+        </div>
+        <div class="navbar-stats">
+            <div class="nav-stat">
+                <i class="fas fa-layer-group"></i>
+                <span class="nav-stat-label">Toplam</span>
+                <span class="nav-stat-value" id="nav-total">0</span>
+            </div>
+            <div class="nav-stat active-stat">
+                <i class="fas fa-clock"></i>
+                <span class="nav-stat-label">Aktif</span>
+                <span class="nav-stat-value" id="nav-active">0</span>
+            </div>
+            <div class="nav-stat verify-stat">
+                <i class="fas fa-check-circle"></i>
+                <span class="nav-stat-label">Doğrulanacak</span>
+                <span class="nav-stat-value" id="nav-verify">0</span>
+            </div>
+            <div class="nav-stat verified-stat">
+                <i class="fas fa-shield-check"></i>
+                <span class="nav-stat-label">Onaylanan</span>
+                <span class="nav-stat-value" id="nav-verified">0</span>
+            </div>
+            <div class="nav-stat sold-stat">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="nav-stat-label">Satılan</span>
+                <span class="nav-stat-value" id="nav-sold">0</span>
+            </div>
+        </div>
+        <div class="navbar-actions">
+            <button class="btn-add-nav" onclick="openModal()">
+                <i class="fas fa-plus"></i>
+                Yeni Hesap Ekle
+            </button>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-panel="dashboard">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#active" class="nav-item" data-panel="active">
+                    <i class="fas fa-clock"></i>
+                    <span>Aktif Hesaplar</span>
+                </a>
+                <a href="#verify" class="nav-item" data-panel="verify">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Doğrulanacak</span>
+                </a>
+                <a href="#verified" class="nav-item" data-panel="verified">
+                    <i class="fas fa-shield-check"></i>
+                    <span>Onaylananlar</span>
+                </a>
+                <a href="#sold" class="nav-item" data-panel="sold">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Satılanlar</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <h1 id="page-title">Dashboard</h1>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Hesap ara...">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Panel -->
+            <section id="panel-dashboard" class="panel active-panel">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-active">0</h3>
+                            <p>Aktif Hesap</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-verify">0</h3>
+                            <p>Doğrulanacak</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i class="fas fa-shield-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-verified">0</h3>
+                            <p>Onaylanan</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-sold">0</h3>
+                            <p>Satılan</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-sections">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2><i class="fas fa-clock"></i> Aktif Hesaplar</h2>
+                            <button class="btn-text" onclick="showPanel('active')">Tümünü Gör</button>
+                        </div>
+                        <div class="account-list" id="dashboard-active-list">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>Henüz hesap eklenmemiş</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h2><i class="fas fa-check-circle"></i> Doğrulanacak</h2>
+                            <button class="btn-text" onclick="showPanel('verify')">Tümünü Gör</button>
+                        </div>
+                        <div class="account-list" id="dashboard-verify-list">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>Doğrulanacak hesap yok</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Accounts Panel -->
+            <section id="panel-active" class="panel">
+                <div class="panel-header">
+                    <div class="panel-info">
+                        <h2>Aktif Hesaplar</h2>
+                        <p>72 saat dolmasına kalan süre</p>
+                    </div>
+                    <div class="panel-count">
+                        <span id="count-active">0</span> hesap
+                    </div>
+                </div>
+                <div class="accounts-table-container">
+                    <table class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th>Hesap</th>
+                                <th>Şifre</th>
+                                <th>2FA Key</th>
+                                <th>Açılış Tarihi</th>
+                                <th>Kalan Süre</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-active"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Verify Panel -->
+            <section id="panel-verify" class="panel">
+                <div class="panel-header">
+                    <div class="panel-info">
+                        <h2>Doğrulanacak Hesaplar</h2>
+                        <p>72 saati dolan hesaplar</p>
+                    </div>
+                    <div class="panel-count">
+                        <span id="count-verify">0</span> hesap
+                    </div>
+                </div>
+                <div class="accounts-table-container">
+                    <table class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th>Hesap</th>
+                                <th>Şifre</th>
+                                <th>2FA Key</th>
+                                <th>Açılış Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-verify"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Verified Panel -->
+            <section id="panel-verified" class="panel">
+                <div class="panel-header">
+                    <div class="panel-info">
+                        <h2><i class="fas fa-shield-check"></i> Onaylanan Hesaplar</h2>
+                        <p>Satılmaya hazır hesaplar</p>
+                    </div>
+                    <div class="panel-count">
+                        <span id="count-verified">0</span> hesap
+                    </div>
+                </div>
+                <div class="accounts-table-container">
+                    <table class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th>Hesap</th>
+                                <th>Şifre</th>
+                                <th>2FA Key</th>
+                                <th>Onaylanma Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-verified"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sold Panel -->
+            <section id="panel-sold" class="panel">
+                <div class="panel-header">
+                    <div class="panel-info">
+                        <h2>Satılan Hesaplar</h2>
+                        <p>Satışı tamamlanan hesaplar</p>
+                    </div>
+                    <div class="panel-count">
+                        <span id="count-sold">0</span> hesap
+                    </div>
+                </div>
+                <div class="accounts-table-container">
+                    <table class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th>Hesap</th>
+                                <th>Şifre</th>
+                                <th>2FA Key</th>
+                                <th>Satış Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sold"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Yeni Hesap Ekle</h2>
+                <button class="btn-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-account-form">
+                    <div class="form-group">
+                        <label>E-posta / Kullanıcı Adı</label>
+                        <input type="text" id="acc-email" placeholder="ornek@mail.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifre</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="acc-password" placeholder="Şifre" required>
+                            <button type="button" class="btn-input-action" onclick="setFixedPassword()"
+                                title="Sabit Şifre Kullan">
+                                <i class="fas fa-key"></i>
+                            </button>
+                        </div>
+                        <small class="form-hint">Butona basarak "0123456Asd%" şifresini kullanabilirsiniz</small>
+                    </div>
+                    <div class="form-group">
+                        <label>2FA Key</label>
+                        <input type="text" id="acc-2fa" placeholder="2FA Secret Key">
+                    </div>
+                    <div class="form-group">
+                        <label>Not (Opsiyonel)</label>
+                        <textarea id="acc-note" placeholder="Ekstra not..." rows="2"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal()">İptal</button>
+                        <button type="submit" class="btn-primary">Hesap Ekle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
