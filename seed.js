@@ -37,60 +37,45 @@ function parseLine(line, currentDate) {
     let twoFA = '';
     let password = '';
     let email = '';
-    let note = '';
     let status = 'active';
 
     let emailIdx = parts.findIndex(isEmail);
     if (emailIdx === -1) return null;
 
+    email = parts[emailIdx];
+
     // Check if first part is 2FA key
     if (is2FAKey(parts[0])) {
         twoFA = parts[0];
-        password = parts[1] || '';
-        email = parts[emailIdx];
+    }
 
-        const remainingAfterEmail = parts.slice(emailIdx + 1);
-        const statusIdx = remainingAfterEmail.findIndex(p =>
-            p.toLowerCase().includes('satıldı') ||
-            p.toLowerCase().includes('onaylanıyo') ||
-            p.toLowerCase().includes('onaylandi')
-        );
-
-        if (statusIdx !== -1) {
-            const statusWord = remainingAfterEmail[statusIdx].toLowerCase();
-            if (statusWord.includes('satıldı')) status = 'sold';
-            else if (statusWord.includes('onaylanıyo')) status = 'verified';
-            else if (statusWord.includes('onaylandi')) status = 'verified';
-
-            note = remainingAfterEmail.slice(0, statusIdx).join(' ');
-        } else {
-            note = remainingAfterEmail.join(' ');
-        }
-    } else {
-        // No 2FA key, first part is password
-        password = parts[0];
-        email = parts[emailIdx];
-
-        const remainingAfterEmail = parts.slice(emailIdx + 1);
-        const statusIdx = remainingAfterEmail.findIndex(p =>
-            p.toLowerCase().includes('satıldı') ||
-            p.toLowerCase().includes('onaylanıyo') ||
-            p.toLowerCase().includes('onaylandi')
-        );
-
-        if (statusIdx !== -1) {
-            const statusWord = remainingAfterEmail[statusIdx].toLowerCase();
-            if (statusWord.includes('satıldı')) status = 'sold';
-            else if (statusWord.includes('onaylanıyo')) status = 'verified';
-            else if (statusWord.includes('onaylandi')) status = 'verified';
-
-            note = remainingAfterEmail.slice(0, statusIdx).join(' ');
-        } else {
-            note = remainingAfterEmail.join(' ');
+    // Password is the first word after email
+    if (emailIdx + 1 < parts.length) {
+        const nextWord = parts[emailIdx + 1];
+        // If next word is a status keyword, skip it
+        if (!nextWord.toLowerCase().includes('satıldı') &&
+            !nextWord.toLowerCase().includes('onaylanıyo') &&
+            !nextWord.toLowerCase().includes('onaylandi')) {
+            password = nextWord;
         }
     }
 
-    return { two_fa: twoFA, password, email, note, status, created_at: currentDate };
+    // Find status in remaining parts after password
+    const remainingAfterPassword = parts.slice(emailIdx + (password ? 2 : 1));
+    const statusIdx = remainingAfterPassword.findIndex(p =>
+        p.toLowerCase().includes('satıldı') ||
+        p.toLowerCase().includes('onaylanıyo') ||
+        p.toLowerCase().includes('onaylandi')
+    );
+
+    if (statusIdx !== -1) {
+        const statusWord = remainingAfterPassword[statusIdx].toLowerCase();
+        if (statusWord.includes('satıldı')) status = 'sold';
+        else if (statusWord.includes('onaylanıyo')) status = 'verified';
+        else if (statusWord.includes('onaylandi')) status = 'verified';
+    }
+
+    return { two_fa: twoFA, password, email, note: '', status, created_at: currentDate };
 }
 
 async function clearAll() {
