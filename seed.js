@@ -15,10 +15,19 @@ function isEmail(str) {
 }
 
 function isDateLine(str) {
-    return /^\d{1,2}\.\d{1,2}\.\d{4}/.test(str) || /^\d{1,2}\.\d{1,2}\s+\d{2}\.\d{2}/.test(str);
+    return /^\d{1,2}\.\d{1,2}\.\d{4}/.test(str);
 }
 
-function parseLine(line) {
+function parseDateLine(line) {
+    // Format: "02.06.2026 13.40" or "02.06.2026"
+    const match = line.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2})\.(\d{2}))?/);
+    if (!match) return null;
+    const [, d, m, y, hh, mm] = match;
+    const date = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${hh ? hh.padStart(2, '0') : '00'}:${mm || '00'}:00+03:00`);
+    return date.toISOString();
+}
+
+function parseLine(line, currentDate) {
     const parts = line.split(/\s+/).filter(p => p.length > 0);
 
     if (isDateLine(line) || parts.length === 0) {
@@ -81,7 +90,7 @@ function parseLine(line) {
         }
     }
 
-    return { two_fa: twoFA, password, email, note, status };
+    return { two_fa: twoFA, password, email, note, status, created_at: currentDate };
 }
 
 async function clearAll() {
@@ -119,19 +128,28 @@ async function seed() {
 
     let inserted = 0;
     let skipped = 0;
+    let currentDate = new Date().toISOString();
 
     for (const line of lines) {
-        const parsed = parseLine(line);
+        // Check if this is a date line
+        const parsedDate = parseDateLine(line);
+        if (parsedDate) {
+            currentDate = parsedDate;
+            skipped++; // Date lines don't create accounts
+            continue;
+        }
+
+        const parsed = parseLine(line, currentDate);
         if (!parsed) { skipped++; continue; }
 
-        const { two_fa, password, email, note, status } = parsed;
+        const { two_fa, password, email, note, status, created_at } = parsed;
         if (!email) { skipped++; continue; }
 
         let verifiedAt = null;
         let soldAt = null;
 
-        if (status === 'verified') verifiedAt = new Date().toISOString();
-        else if (status === 'sold') soldAt = new Date().toISOString();
+        if (status === 'verified') verifiedAt = created_at;
+        else if (status === 'sold') soldAt = created_at;
 
         const obj = {
             email,
@@ -139,7 +157,7 @@ async function seed() {
             two_fa: two_fa || '',
             note: note || '',
             status,
-            created_at: new Date().toISOString(),
+            created_at: created_at,
             verified_at: verifiedAt,
             sold_at: soldAt
         };

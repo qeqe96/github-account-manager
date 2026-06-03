@@ -786,7 +786,7 @@
     <div class="modal" id="modal">
         <div class="m-box">
             <div class="m-head">
-                <h3>Yeni Hesap Ekle</h3><button class="m-close" onclick="closeModal()"><i
+                <h3 id="m-title">Yeni Hesap Ekle</h3><button class="m-close" onclick="closeModal()"><i
                         class="fas fa-times"></i></button>
             </div>
             <form onsubmit="saveAcc(event)">
@@ -800,7 +800,7 @@
                 <div class="fg"><label>2FA Key</label><input type="text" id="m-2fa" placeholder="2FA Secret Key"></div>
                 <div class="fg"><label>Not</label><input type="text" id="m-note" placeholder="Opsiyonel"></div>
                 <div class="m-foot"><button type="button" class="m-sec" onclick="closeModal()">İptal</button><button
-                        type="submit" class="m-prim">Ekle</button></div>
+                        type="submit" class="m-prim" id="m-submit">Ekle</button></div>
             </form>
         </div>
     </div>
@@ -813,7 +813,7 @@
         const H72 = 72 * 60 * 60 * 1000, FIX = '0123456Asd%', PER = 25;
         const SB_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6eGlkbGRibWp1aHl3b2d1b3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mjc5OTUsImV4cCI6MjA5NjAwMzk5NX0.NwflyEPFj5oVwQBjIAwP2EXvLJBVUSh4Jmeitfz2cag';
-        let sb = null, acc = [], tab = 'all', page = 1, totalPages = 1;
+        let sb = null, acc = [], tab = 'all', page = 1, totalPages = 1, editingId = null;
         const totpCache = {};
 
         function init() { try { sb = window.supabase.createClient(SB_URL, SB_KEY) } catch (e) { sb = null } load() }
@@ -821,10 +821,28 @@
 
         function setTab(t) { tab = t; page = 1; document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); render() }
         function fixPass() { document.getElementById('m-pass').value = FIX; toast('Sabit şifre: ' + FIX) }
-        function openModal() { document.getElementById('modal').classList.add('show'); document.getElementById('m-email').focus() }
-        function closeModal() { document.getElementById('modal').classList.remove('show'); document.querySelector('form').reset() }
+        function openModal(id) {
+            document.getElementById('modal').classList.add('show');
+            if (id) {
+                const a = acc.find(x => x.id == id);
+                if (!a) return closeModal();
+                editingId = id;
+                document.getElementById('m-email').value = a.email;
+                document.getElementById('m-pass').value = a.password;
+                document.getElementById('m-2fa').value = a.two_fa || '';
+                document.getElementById('m-note').value = a.note || '';
+                document.getElementById('m-title').textContent = 'Hesabı Düzenle';
+                document.getElementById('m-submit').textContent = 'Güncelle';
+            } else {
+                editingId = null;
+                document.getElementById('m-title').textContent = 'Yeni Hesap Ekle';
+                document.getElementById('m-submit').textContent = 'Ekle';
+            }
+            document.getElementById('m-email').focus();
+        }
+        function closeModal() { document.getElementById('modal').classList.remove('show'); document.querySelector('form').reset(); editingId = null; document.getElementById('m-title').textContent = 'Yeni Hesap Ekle'; document.getElementById('m-submit').textContent = 'Ekle' }
 
-        async function saveAcc(e) { e.preventDefault(); const o = { email: document.getElementById('m-email').value.trim(), password: document.getElementById('m-pass').value.trim(), two_fa: document.getElementById('m-2fa').value.trim(), note: document.getElementById('m-note').value.trim(), status: 'active', created_at: new Date().toISOString(), verified_at: null, sold_at: null }; if (!o.email || !o.password) return toast('E-posta ve şifre gerekli', 'err'); if (!sb) { o.id = Date.now(); acc.unshift(o); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); closeModal(); toast('Eklendi (local)', 'ok'); return } const { error } = await sb.from('accounts').insert(o); if (error) { toast('Hata: ' + error.message, 'err') } else { await load(); closeModal(); toast('Eklendi', 'ok') } }
+        async function saveAcc(e) { e.preventDefault(); const o = { email: document.getElementById('m-email').value.trim(), password: document.getElementById('m-pass').value.trim(), two_fa: document.getElementById('m-2fa').value.trim(), note: document.getElementById('m-note').value.trim() }; if (!o.email || !o.password) return toast('E-posta ve şifre gerekli', 'err'); if (editingId) { if (!sb) { const a = acc.find(x => x.id == editingId); if (a) { Object.assign(a, o); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); closeModal(); toast('Güncellendi (local)', 'ok') } return } const { error } = await sb.from('accounts').update(o).eq('id', editingId); if (error) { toast('Hata: ' + error.message, 'err') } else { await load(); closeModal(); toast('Güncellendi', 'ok') } return } o.status = 'active'; o.created_at = new Date().toISOString(); o.verified_at = null; o.sold_at = null; if (!sb) { o.id = Date.now(); acc.unshift(o); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); closeModal(); toast('Eklendi (local)', 'ok'); return } const { error } = await sb.from('accounts').insert(o); if (error) { toast('Hata: ' + error.message, 'err') } else { await load(); closeModal(); toast('Eklendi', 'ok') } }
 
         async function delAcc(id) { if (!confirm('Sil?')) return; if (!sb) { acc = acc.filter(a => a.id != id); localStorage.setItem('gam_accounts', JSON.stringify(acc)); render(); toast('Silindi', 'ok'); return } await sb.from('accounts').delete().eq('id', id); await load(); toast('Silindi', 'ok') }
 
@@ -846,7 +864,7 @@
                     if (a.status === 'active') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verify')" title="Doğrulanacak"><i class="fas fa-arrow-right"></i></button>`;
                     else if (a.status === 'verify') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verified')" title="Onayla"><i class="fas fa-check"></i></button>`;
                     else if (a.status === 'verified') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'sold')" title="Sat"><i class="fas fa-shopping-cart"></i></button>`;
-                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span><button class="cpy" onclick="copy('${esc(a.email)}','E-posta')" title="Kopyala"><i class="fas fa-copy"></i></button></div></td><td><span class="mono">${esc(a.password)}</span><button class="cpy" onclick="copy('${esc(a.password)}','Şifre')" title="Kopyala"><i class="fas fa-copy"></i></button></td><td><span class="mono">${esc(a.two_fa || '-')}</span>${a.two_fa ? `<button class="cpy" onclick="copy('${esc(a.two_fa)}','2FA Key')" title="Kopyala"><i class="fas fa-copy"></i></button><button class="totp-btn" onclick="genTOTP(${a.id},'${esc(a.two_fa)}')" title="TOTP Kodu"><i class="fas fa-bolt"></i></button>${totpCache[a.id] ? `<span class="totp-code">${totpCache[a.id]}</span>` : ''}` : ''}</td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}${a.note ? `<button class="cpy" onclick="copy('${esc(a.note)}','Not')" title="Kopyala"><i class="fas fa-copy"></i></button>` : ''}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
+                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span><button class="cpy" onclick="copy('${esc(a.email)}','E-posta')" title="Kopyala"><i class="fas fa-copy"></i></button></div></td><td><span class="mono">${esc(a.password)}</span><button class="cpy" onclick="copy('${esc(a.password)}','Şifre')" title="Kopyala"><i class="fas fa-copy"></i></button></td><td><span class="mono">${esc(a.two_fa || '-')}</span>${a.two_fa ? `<button class="cpy" onclick="copy('${esc(a.two_fa)}','2FA Key')" title="Kopyala"><i class="fas fa-copy"></i></button><button class="totp-btn" onclick="genTOTP(${a.id},'${esc(a.two_fa)}')" title="TOTP Kodu"><i class="fas fa-bolt"></i></button>${totpCache[a.id] ? `<span class="totp-code">${totpCache[a.id]}</span>` : ''}` : ''}</td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}${a.note ? `<button class="cpy" onclick="copy('${esc(a.note)}','Not')" title="Kopyala"><i class="fas fa-copy"></i></button>` : ''}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button><button class="btn-a" onclick="openModal(${a.id})" title="Düzenle"><i class="fas fa-pen"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
                 }).join('')
             }
             document.getElementById('showing').textContent = f.length; renderPages()
