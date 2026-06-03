@@ -1,9 +1,8 @@
-// Supabase Seed Script - github.txt verilerini Supabase'e yükler
+// Supabase Seed Script - github.txt verilerini Supabase'e yukler
 // ================================================================
 
 const fs = require('fs');
 
-// Supabase config - KULLANICI BUNLARI DOLDURACAK
 const SUPABASE_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6eGlkbGRibWp1aHl3b2d1b3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mjc5OTUsImV4cCI6MjA5NjAwMzk5NX0.NwflyEPFj5oVwQBjIAwP2EXvLJBVUSh4Jmeitfz2cag';
 
@@ -15,10 +14,14 @@ function isEmail(str) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 }
 
-function parseLine(line) {
-    const parts = line.split(/\s+/);
+function isDateLine(str) {
+    return /^\d{1,2}\.\d{1,2}\.\d{4}/.test(str) || /^\d{1,2}\.\d{1,2}\s+\d{2}\.\d{2}/.test(str);
+}
 
-    if (/^\d{1,2}\.\d{1,2}\.\d{4}/.test(line) || /^\d{1,2}\.\d{1,2}\s+\d{2}\.\d{2}/.test(line)) {
+function parseLine(line) {
+    const parts = line.split(/\s+/).filter(p => p.length > 0);
+
+    if (isDateLine(line) || parts.length === 0) {
         return null;
     }
 
@@ -31,6 +34,7 @@ function parseLine(line) {
     let emailIdx = parts.findIndex(isEmail);
     if (emailIdx === -1) return null;
 
+    // Check if first part is 2FA key
     if (is2FAKey(parts[0])) {
         twoFA = parts[0];
         password = parts[1] || '';
@@ -54,6 +58,7 @@ function parseLine(line) {
             note = remainingAfterEmail.join(' ');
         }
     } else {
+        // No 2FA key, first part is password
         password = parts[0];
         email = parts[emailIdx];
 
@@ -79,11 +84,35 @@ function parseLine(line) {
     return { two_fa: twoFA, password, email, note, status };
 }
 
+async function clearAll() {
+    console.log('Tum hesaplar siliniyor...');
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/accounts?id=not.is.null`, {
+            method: 'DELETE',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Prefer': 'return=minimal'
+            }
+        });
+        if (res.ok) {
+            console.log('Tum hesaplar silindi');
+        } else {
+            console.error('Silme hatasi:', await res.text());
+        }
+    } catch (err) {
+        console.error('Silme hatasi:', err.message);
+    }
+}
+
 async function seed() {
     if (SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
-        console.error('HATA: SUPABASE_URL ve SUPABASE_KEY değerlerini seed.js dosyasında doldurun!');
+        console.error('HATA: SUPABASE_URL ve SUPABASE_KEY degerlerini seed.js dosyasinda doldurun!');
         process.exit(1);
     }
+
+    // Once tum verileri sil
+    await clearAll();
 
     const rawData = fs.readFileSync('github.txt', 'utf8');
     const lines = rawData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -96,7 +125,7 @@ async function seed() {
         if (!parsed) { skipped++; continue; }
 
         const { two_fa, password, email, note, status } = parsed;
-        if (!email || !password) { skipped++; continue; }
+        if (!email) { skipped++; continue; }
 
         let verifiedAt = null;
         let soldAt = null;
@@ -106,9 +135,9 @@ async function seed() {
 
         const obj = {
             email,
-            password,
-            two_fa,
-            note,
+            password: password || '0123456Asd%',
+            two_fa: two_fa || '',
+            note: note || '',
             status,
             created_at: new Date().toISOString(),
             verified_at: verifiedAt,
@@ -141,7 +170,7 @@ async function seed() {
         }
     }
 
-    console.log(`\nSeed tamamlandı: ${inserted} hesap eklendi, ${skipped} satır atlandı`);
+    console.log(`\nSeed tamamlandi: ${inserted} hesap eklendi, ${skipped} satir atlandi`);
 }
 
 seed();

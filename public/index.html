@@ -140,6 +140,27 @@
             border-bottom: 1px solid var(--border)
         }
 
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .btn-del {
+            padding: 5px 10px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--red);
+            border-radius: 5px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600
+        }
+
+        .btn-del:hover {
+            background: rgba(239, 68, 68, .15)
+        }
+
         .tabs {
             display: flex;
             gap: 3px;
@@ -386,6 +407,34 @@
         .btn-a:hover {
             background: var(--blue);
             color: #fff
+        }
+
+        .totp-code {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--orange);
+            background: rgba(245, 158, 11, .12);
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: pop .2s
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(.8);
+                opacity: 0
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1
+            }
         }
 
         .cpy {
@@ -695,12 +744,16 @@
         </header>
 
         <div class="toolbar">
-            <div class="tabs">
-                <button class="tab on" data-tab="all" onclick="setTab('all')">Tümü</button>
-                <button class="tab" data-tab="active" onclick="setTab('active')">Aktif</button>
-                <button class="tab" data-tab="verify" onclick="setTab('verify')">Doğrulanacak</button>
-                <button class="tab" data-tab="verified" onclick="setTab('verified')">Onaylanan</button>
-                <button class="tab" data-tab="sold" onclick="setTab('sold')">Satılan</button>
+            <div class="toolbar-left">
+                <div class="tabs">
+                    <button class="tab on" data-tab="all" onclick="setTab('all')">Tümü</button>
+                    <button class="tab" data-tab="active" onclick="setTab('active')">Aktif</button>
+                    <button class="tab" data-tab="verify" onclick="setTab('verify')">Doğrulanacak</button>
+                    <button class="tab" data-tab="verified" onclick="setTab('verified')">Onaylanan</button>
+                    <button class="tab" data-tab="sold" onclick="setTab('sold')">Satılan</button>
+                </div>
+                <button class="btn-del" onclick="delAll()" title="Tümünü Sil"><i class="fas fa-trash-alt"></i> Tümünü
+                    Sil</button>
             </div>
             <div class="search"><i class="fas fa-search"></i><input type="text" id="search" placeholder="Ara..."
                     oninput="render()"></div>
@@ -761,6 +814,7 @@
         const SB_URL = 'https://kzxidldbmjuhywoguoti.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6eGlkbGRibWp1aHl3b2d1b3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0Mjc5OTUsImV4cCI6MjA5NjAwMzk5NX0.NwflyEPFj5oVwQBjIAwP2EXvLJBVUSh4Jmeitfz2cag';
         let sb = null, acc = [], tab = 'all', page = 1, totalPages = 1;
+        const totpCache = {};
 
         function init() { try { sb = window.supabase.createClient(SB_URL, SB_KEY) } catch (e) { sb = null } load() }
         async function load() { if (!sb) { acc = JSON.parse(localStorage.getItem('gam_accounts') || '[]'); render(); return } const { data, error } = await sb.from('accounts').select('*').order('created_at', { ascending: false }); if (error) { acc = JSON.parse(localStorage.getItem('gam_accounts') || '[]'); toast('Supabase hatası, localStorage', 'err') } else { acc = data || [] } render() }
@@ -781,7 +835,8 @@
         function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML }
         function copy(t, l) { navigator.clipboard.writeText(t).then(() => toast(l + ' kopyalandı', 'ok')).catch(() => { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); document.execCommand('copy'); document.body.removeChild(x); toast(l + ' kopyalandı', 'ok') }) }
         function copyAll(id) { const a = acc.find(x => x.id == id); if (!a) return; copy(`E-posta: ${a.email}\nŞifre: ${a.password}${a.two_fa ? '\n2FA: ' + a.two_fa : ''}`, 'Hesap bilgileri') }
-        function genTOTP(key) { try { const k = key.replace(/\s/g, '').toUpperCase(); const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(k), digits: 6, period: 30 }); const code = totp.generate(); copy(code, 'TOTP Kodu'); toast('TOTP Kodu: ' + code, 'ok') } catch (e) { toast('2FA Key geçersiz', 'err') } }
+        function genTOTP(id, key) { try { const k = key.replace(/\s/g, '').toUpperCase(); const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(k), digits: 6, period: 30 }); const code = totp.generate(); totpCache[id] = code; copy(code, 'TOTP Kodu'); render() } catch (e) { toast('2FA Key geçersiz', 'err') } }
+        async function delAll() { if (!confirm('Tüm hesaplar silinecek. Emin misin?')) return; if (!sb) { acc = []; localStorage.setItem('gam_accounts', '[]'); render(); toast('Tüm hesaplar silindi', 'ok'); return } const { error } = await sb.from('accounts').delete().neq('id', 0); if (error) { toast('Hata: ' + error.message, 'err') } else { await load(); toast('Tüm hesaplar silindi', 'ok') } }
 
         function render() {
             const q = document.getElementById('search').value.toLowerCase(); let f = acc; if (tab !== 'all') f = f.filter(a => a.status === tab); if (q) f = f.filter(a => (a.email + ' ' + (a.note || '') + ' ' + (a.two_fa || '')).toLowerCase().includes(q)); document.getElementById('st-total').textContent = acc.length; document.getElementById('st-active').textContent = acc.filter(a => a.status === 'active').length; document.getElementById('st-verify').textContent = acc.filter(a => a.status === 'verify').length; document.getElementById('st-verified').textContent = acc.filter(a => a.status === 'verified').length; document.getElementById('st-sold').textContent = acc.filter(a => a.status === 'sold').length; totalPages = Math.max(1, Math.ceil(f.length / PER)); if (page > totalPages) page = totalPages; const start = (page - 1) * PER, pageItems = f.slice(start, start + PER); const tb = document.getElementById('tbody'); if (!pageItems.length) { tb.innerHTML = '<tr><td colspan="8" class="empty"><i class="fas fa-inbox"></i>Hesap bulunamadı</td></tr>' } else {
@@ -791,7 +846,7 @@
                     if (a.status === 'active') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verify')" title="Doğrulanacak"><i class="fas fa-arrow-right"></i></button>`;
                     else if (a.status === 'verify') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'verified')" title="Onayla"><i class="fas fa-check"></i></button>`;
                     else if (a.status === 'verified') btns = `<button class="btn-a" onclick="moveAcc(${a.id},'sold')" title="Sat"><i class="fas fa-shopping-cart"></i></button>`;
-                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span><button class="cpy" onclick="copy('${esc(a.email)}','E-posta')" title="Kopyala"><i class="fas fa-copy"></i></button></div></td><td><span class="mono">${esc(a.password)}</span><button class="cpy" onclick="copy('${esc(a.password)}','Şifre')" title="Kopyala"><i class="fas fa-copy"></i></button></td><td><span class="mono">${esc(a.two_fa || '-')}</span>${a.two_fa ? `<button class="cpy" onclick="copy('${esc(a.two_fa)}','2FA Key')" title="Kopyala"><i class="fas fa-copy"></i></button><button class="totp-btn" onclick="genTOTP('${esc(a.two_fa)}')" title="TOTP Kodu"><i class="fas fa-bolt"></i></button>` : ''}</td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}${a.note ? `<button class="cpy" onclick="copy('${esc(a.note)}','Not')" title="Kopyala"><i class="fas fa-copy"></i></button>` : ''}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
+                    return `<tr data-id="${a.id}"><td><div class="cell"><div class="avatar">${esc(a.email).slice(0, 2).toUpperCase()}</div><span class="email">${esc(a.email)}</span><button class="cpy" onclick="copy('${esc(a.email)}','E-posta')" title="Kopyala"><i class="fas fa-copy"></i></button></div></td><td><span class="mono">${esc(a.password)}</span><button class="cpy" onclick="copy('${esc(a.password)}','Şifre')" title="Kopyala"><i class="fas fa-copy"></i></button></td><td><span class="mono">${esc(a.two_fa || '-')}</span>${a.two_fa ? `<button class="cpy" onclick="copy('${esc(a.two_fa)}','2FA Key')" title="Kopyala"><i class="fas fa-copy"></i></button><button class="totp-btn" onclick="genTOTP(${a.id},'${esc(a.two_fa)}')" title="TOTP Kodu"><i class="fas fa-bolt"></i></button>${totpCache[a.id] ? `<span class="totp-code">${totpCache[a.id]}</span>` : ''}` : ''}</td><td>${fmtDate(a.created_at)}</td><td>${fmtTimer(a.created_at, a.status, a.verified_at)}</td><td>${stMap[a.status] || a.status}</td><td>${esc(a.note) || '-'}${a.note ? `<button class="cpy" onclick="copy('${esc(a.note)}','Not')" title="Kopyala"><i class="fas fa-copy"></i></button>` : ''}</td><td><div class="actions"><button class="btn-a" onclick="copyAll(${a.id})" title="Tümünü Kopyala"><i class="fas fa-copy"></i></button>${btns}<button class="btn-a" onclick="delAcc(${a.id})" title="Sil"><i class="fas fa-trash"></i></button></div></td></tr>`
                 }).join('')
             }
             document.getElementById('showing').textContent = f.length; renderPages()
